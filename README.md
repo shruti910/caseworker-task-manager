@@ -215,14 +215,6 @@ The HTML coverage report is generated at:
 backend/target/site/jacoco/index.html
 ```
 
-#### Backend Coverage Summary:
-- Service Layer (`TaskServiceImpl`): 100% line coverage, 100% branch coverage
-- Controller Layer (`TaskController`): 100% line coverage
-- Mapper Layer (`TaskMapper`): 100% line coverage, 100% branch coverage
-- Configuration Layer: 100% line coverage
-- DTO Contracts: 100% line coverage
-- Total Backend Instruction Coverage: 87% across 34 tests
-
 ### Frontend Tests
 Execute Vitest test suite with React Testing Library:
 ```sh
@@ -239,12 +231,6 @@ The HTML coverage report is generated at:
 ```
 frontend/coverage/index.html
 ```
-
-#### Frontend Coverage Summary:
-- Component Layer: 94.2% line coverage
-- API Service Layer: 96.5% line coverage
-- Total Frontend Statements Coverage: 87.6% across 26 test suites
-
 ---
 
 ## 8. API Endpoint Documentation
@@ -293,21 +279,6 @@ All endpoints return JSON responses and use standard HTTP status codes.
     }
   ]
 }
-```
-
----
-
-## 9. Swagger UI Location
-
-When the backend application is running, the interactive OpenAPI documentation and Swagger UI are accessible at:
-
-```
-http://localhost:8080/swagger-ui/index.html
-```
-
-The raw OpenAPI specification is available at:
-```
-http://localhost:8080/v3/api-docs
 ```
 
 ---
