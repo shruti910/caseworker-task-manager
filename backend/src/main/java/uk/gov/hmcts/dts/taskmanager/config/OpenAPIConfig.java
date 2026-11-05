@@ -26,4 +26,3 @@ public class OpenAPIConfig {
                                 .url("https://example.com/license")));
     }
 }
-

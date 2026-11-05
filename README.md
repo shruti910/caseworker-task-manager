@@ -22,7 +22,7 @@ This system provides a single, responsive operational dashboard allowing casewor
 
 ### Backend
 - Language: Java 21 (LTS)
-- Framework: Spring Boot 3.4.1
+- Framework: Spring Boot 3.4.x
 - REST API: Spring Web (MVC)
 - Persistence: Spring Data JPA, Hibernate 6
 - Validation: Jakarta Bean Validation (Hibernate Validator)
@@ -155,17 +155,22 @@ docker-compose down -v
 
 If running the application components natively on your machine:
 
-#### Step 1: Start PostgreSQL Database
-Run PostgreSQL via a standalone container:
+#### Step 1: Start Local PostgreSQL Database
+Ensure your local PostgreSQL service is running:
+- **macOS (Homebrew)**: `brew services start postgresql@16` (or `brew services start postgresql`)
+- **Linux (systemd)**: `sudo systemctl start postgresql`
+- **Windows**: Start the PostgreSQL service from Services (`services.msc`)
+
+Create the application database:
 ```sh
-docker run --name caseworker-postgres \
-  -e POSTGRES_DB=caseworker_tasks \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -p 5432:5432 \
-  -d postgres:16-alpine
+createdb caseworker_tasks
 ```
-*(Or create the database in your local PostgreSQL installation: `CREATE DATABASE caseworker_tasks;`)*
+Or via the PostgreSQL shell:
+```sql
+CREATE DATABASE caseworker_tasks;
+```
+
+Ensure your `.env` configuration (`DB_USERNAME`, `DB_PASSWORD`, `DB_PORT=5432`) matches your local PostgreSQL credentials.
 
 Database schema migrations (`V1__create_tasks_table.sql`) are applied automatically by Flyway on backend startup.
 
