@@ -197,7 +197,7 @@ export function App() {
       <footer className="govuk-footer" role="contentinfo">
         <div className="govuk-footer__container">
           <p className="govuk-footer__text">
-            HM Courts &amp; Tribunals Service &mdash; Caseworker Task Management System. Official HMCTS Developer Challenge Solution.
+            HMCTS Developer Challenge Solution. Caseworker Task Management System.
           </p>
         </div>
       </footer>

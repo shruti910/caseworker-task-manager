@@ -150,7 +150,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
             <label className="govuk-label" htmlFor="task-title">
               Task Title <span className="govuk-label--mandatory">(required)</span>
             </label>
-            <span className="govuk-hint">Enter a descriptive title for this caseworker task. Maximum 150 characters.</span>
+            <span className="govuk-hint">Enter a descriptive title for this task. Maximum 150 characters.</span>
             {errors.title && (
               <p className="govuk-error-message" data-testid="title-error">
                 <span className="govuk-visually-hidden">Error:</span> {errors.title}
@@ -174,7 +174,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
             <label className="govuk-label" htmlFor="task-description">
               Description <span className="govuk-label--optional">(optional)</span>
             </label>
-            <span className="govuk-hint">Provide any additional context or instructions for this task. Maximum 2000 characters.</span>
+            <span className="govuk-hint">Provide any additional context or instructions for this task.</span>
             {errors.description && (
               <p className="govuk-error-message" data-testid="description-error">
                 <span className="govuk-visually-hidden">Error:</span> {errors.description}
