@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Task, TaskStatus } from '../types/task';
+import { taskApi } from '../api/taskService';
+import { Task, TaskAuditLog, TaskStatus } from '../types/task';
 import { formatDateTime, getDueStatusText, isTaskOverdue } from '../utils/dateUtils';
 import { StatusBadge } from './StatusBadge';
 
@@ -19,6 +20,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   onDeleteClick,
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<TaskAuditLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -29,6 +32,23 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  const loadAuditLogs = (taskId: number) => {
+    setIsLoadingLogs(true);
+    taskApi
+      .getTaskAuditLogs(taskId)
+      .then((logs) => setAuditLogs(logs))
+      .catch(() => setAuditLogs([]))
+      .finally(() => setIsLoadingLogs(false));
+  };
+
+  useEffect(() => {
+    if (isOpen && task) {
+      loadAuditLogs(task.id);
+    } else {
+      setAuditLogs([]);
+    }
+  }, [isOpen, task?.id]);
 
   if (!isOpen || !task) return null;
 
@@ -42,9 +62,34 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     try {
       setIsUpdating(true);
       await onStatusChange(task.id, newStatus);
+      loadAuditLogs(task.id);
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const formatAuditDetail = (log: TaskAuditLog): string => {
+    if (log.action === 'CREATE') {
+      return 'Task created with initial attributes';
+    }
+    if (log.action === 'DELETE') {
+      return 'Task marked as deleted';
+    }
+    if (log.action === 'UPDATE') {
+      try {
+        if (log.previousState && log.newState) {
+          const prev = JSON.parse(log.previousState);
+          const curr = JSON.parse(log.newState);
+          if (prev.status && curr.status) {
+            return `Status changed from ${prev.status} to ${curr.status}`;
+          }
+        }
+      } catch {
+        // fallback
+      }
+      return `Updated fields: ${log.changedFields || 'task details'}`;
+    }
+    return 'Audit event recorded';
   };
 
   return (
@@ -132,6 +177,39 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           )}
         </div>
 
+        <div className="detail-audit-section">
+          <h3 className="govuk-heading-s">Audit & Activity History</h3>
+          {isLoadingLogs ? (
+            <p className="govuk-hint" data-testid="audit-loading">Loading audit history...</p>
+          ) : auditLogs.length === 0 ? (
+            <p className="govuk-hint" data-testid="audit-empty">No audit entries recorded.</p>
+          ) : (
+            <div className="audit-timeline" data-testid="audit-log-list">
+              {auditLogs.map((log) => (
+                <div key={log.id} className="audit-timeline-item" data-testid={`audit-log-item-${log.id}`}>
+                  <div className="audit-timeline-badge">
+                    <span
+                      className={`govuk-tag ${
+                        log.action === 'CREATE'
+                          ? 'govuk-tag--green'
+                          : log.action === 'DELETE'
+                          ? 'govuk-tag--red'
+                          : 'govuk-tag--blue'
+                      }`}
+                    >
+                      {log.action}
+                    </span>
+                  </div>
+                  <div className="audit-timeline-content">
+                    <span className="audit-timeline-date">{formatDateTime(log.createdAt)}</span>
+                    <span className="audit-timeline-desc">{formatAuditDetail(log)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="modal-footer detail-modal-footer">
           <button
             type="button"
@@ -157,4 +235,3 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     </div>
   );
 };
-

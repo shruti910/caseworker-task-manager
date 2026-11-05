@@ -9,7 +9,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import uk.gov.hmcts.dts.taskmanager.dto.AuditAction;
 import uk.gov.hmcts.dts.taskmanager.dto.CreateTaskRequest;
+import uk.gov.hmcts.dts.taskmanager.dto.TaskAuditLogResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskStatus;
 import uk.gov.hmcts.dts.taskmanager.dto.UpdateTaskStatusRequest;
@@ -312,6 +314,41 @@ class TaskControllerTest {
             mockMvc.perform(delete("/api/tasks/{id}", 88888L))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status", is(404)));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/tasks/{id}/audit-logs")
+    class GetTaskAuditLogsTests {
+
+        @Test
+        @DisplayName("Should return 200 with list of audit logs when task exists")
+        void shouldReturnAuditLogs() throws Exception {
+            TaskAuditLogResponse log1 = new TaskAuditLogResponse(
+                    1L, 10L, AuditAction.CREATE, "title,status", null, "{\"title\":\"Sample\"}", OffsetDateTime.now()
+            );
+            TaskAuditLogResponse log2 = new TaskAuditLogResponse(
+                    2L, 10L, AuditAction.UPDATE, "status", "{\"status\":\"TODO\"}", "{\"status\":\"IN_PROGRESS\"}", OffsetDateTime.now()
+            );
+
+            when(taskService.getTaskAuditLogs(10L)).thenReturn(List.of(log1, log2));
+
+            mockMvc.perform(get("/api/tasks/{id}/audit-logs", 10L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].action", is("CREATE")))
+                    .andExpect(jsonPath("$[1].action", is("UPDATE")));
+        }
+
+        @Test
+        @DisplayName("Should return 404 when task ID does not exist")
+        void shouldReturn404WhenNoLogsFound() throws Exception {
+            when(taskService.getTaskAuditLogs(99999L)).thenThrow(new ResourceNotFoundException("Task with ID 99999 not found"));
+
+            mockMvc.perform(get("/api/tasks/{id}/audit-logs", 99999L))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(jsonPath("$.error", is("Not Found")));
         }
     }
 

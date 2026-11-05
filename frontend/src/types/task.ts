@@ -1,5 +1,7 @@
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
 
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
+
 export interface Task {
   id: number;
   title: string;
@@ -8,6 +10,16 @@ export interface Task {
   dueDateTime: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TaskAuditLog {
+  id: number;
+  taskId: number;
+  action: AuditAction;
+  changedFields: string | null;
+  previousState: string | null;
+  newState: string | null;
+  createdAt: string;
 }
 
 export interface CreateTaskPayload {
@@ -36,4 +48,3 @@ export interface ApiError {
 
 export type TaskFilterOption = 'ALL' | 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
 export type SortDirectionOption = 'asc' | 'desc';
-

@@ -1,4 +1,4 @@
-import { ApiError, CreateTaskPayload, Task, TaskStatus, UpdateTaskStatusPayload } from '../types/task';
+import { ApiError, CreateTaskPayload, Task, TaskAuditLog, TaskStatus, UpdateTaskStatusPayload } from '../types/task';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -95,5 +95,13 @@ export const taskApi = {
     });
     return handleResponse<void>(response);
   },
-};
 
+  async getTaskAuditLogs(taskId: number): Promise<TaskAuditLog[]> {
+    const response = await fetch(`${BASE_URL}/api/tasks/${taskId}/audit-logs`, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+    return handleResponse<TaskAuditLog[]>(response);
+  },
+};

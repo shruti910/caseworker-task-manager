@@ -243,7 +243,8 @@ All endpoints return JSON responses and use standard HTTP status codes.
 | `GET` | `/api/tasks` | Retrieve tasks (with sorting and status filter) | None (query params: `status`, `sortBy`, `sortDirection`) | `200 OK` | `500 Internal Error` |
 | `GET` | `/api/tasks/{id}` | Retrieve a task by ID | None | `200 OK` | `400 Bad Request`, `404 Not Found` |
 | `PATCH` | `/api/tasks/{id}/status` | Update task status | JSON (`status`) | `200 OK` | `400 Bad Request`, `404 Not Found` |
-| `DELETE` | `/api/tasks/{id}` | Delete a task by ID | None | `204 No Content` | `400 Bad Request`, `404 Not Found` |
+| `DELETE` | `/api/tasks/{id}` | Delete a task by ID (soft delete) | None | `204 No Content` | `400 Bad Request`, `404 Not Found` |
+| `GET` | `/api/tasks/{id}/audit-logs` | Retrieve audit history for a task | None | `200 OK` | `400 Bad Request`, `404 Not Found` |
 
 ### Sample Request Payloads
 

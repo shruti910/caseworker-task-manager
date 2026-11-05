@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import uk.gov.hmcts.dts.taskmanager.dto.CreateTaskRequest;
 import uk.gov.hmcts.dts.taskmanager.dto.ErrorResponse;
+import uk.gov.hmcts.dts.taskmanager.dto.TaskAuditLogResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskStatus;
 import uk.gov.hmcts.dts.taskmanager.dto.UpdateTaskStatusRequest;
@@ -121,5 +122,19 @@ public class TaskController {
                         @Parameter(description = "Numeric ID of the task", required = true) @PathVariable Long id) {
                 taskService.deleteTask(id);
                 return ResponseEntity.noContent().build();
+        }
+
+        @GetMapping("/{id}/audit-logs")
+        @Operation(summary = "Retrieve audit log history for a task", description = "Returns the chronological audit trail for a task.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Audit logs retrieved successfully", content = @Content(array = @ArraySchema(schema = @Schema(implementation = TaskAuditLogResponse.class)))),
+                        @ApiResponse(responseCode = "400", description = "Invalid task ID format", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                        @ApiResponse(responseCode = "404", description = "Task not found with the specified ID", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                        @ApiResponse(responseCode = "500", description = "Unexpected internal server error", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        })
+        public ResponseEntity<List<TaskAuditLogResponse>> getTaskAuditLogs(
+                        @Parameter(description = "Numeric ID of the task", required = true) @PathVariable Long id) {
+                List<TaskAuditLogResponse> logs = taskService.getTaskAuditLogs(id);
+                return ResponseEntity.ok(logs);
         }
 }

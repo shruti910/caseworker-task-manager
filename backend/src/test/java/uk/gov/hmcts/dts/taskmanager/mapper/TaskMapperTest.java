@@ -3,10 +3,13 @@ package uk.gov.hmcts.dts.taskmanager.mapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uk.gov.hmcts.dts.taskmanager.dto.AuditAction;
 import uk.gov.hmcts.dts.taskmanager.dto.CreateTaskRequest;
+import uk.gov.hmcts.dts.taskmanager.dto.TaskAuditLogResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskStatus;
 import uk.gov.hmcts.dts.taskmanager.entity.Task;
+import uk.gov.hmcts.dts.taskmanager.entity.TaskAuditLog;
 
 import java.time.OffsetDateTime;
 
@@ -30,8 +33,7 @@ class TaskMapperTest {
                 "  Review document bundle  ",
                 "  Check pages 1-50  ",
                 TaskStatus.IN_PROGRESS,
-                sampleDueDateTime
-        );
+                sampleDueDateTime);
 
         Task entity = taskMapper.toEntity(request);
 
@@ -49,8 +51,7 @@ class TaskMapperTest {
                 "Draft decision",
                 null,
                 null,
-                sampleDueDateTime
-        );
+                sampleDueDateTime);
 
         Task entity = taskMapper.toEntity(request);
 
@@ -64,6 +65,7 @@ class TaskMapperTest {
     void shouldReturnNullForNullInput() {
         assertThat(taskMapper.toEntity(null)).isNull();
         assertThat(taskMapper.toResponse(null)).isNull();
+        assertThat(taskMapper.toAuditResponse(null)).isNull();
     }
 
     @Test
@@ -86,5 +88,30 @@ class TaskMapperTest {
         assertThat(response.createdAt()).isEqualTo(created);
         assertThat(response.updatedAt()).isEqualTo(updated);
     }
-}
 
+    @Test
+    @DisplayName("Should map TaskAuditLog entity to TaskAuditLogResponse correctly")
+    void shouldMapAuditLogToResponse() {
+        OffsetDateTime eventTime = OffsetDateTime.parse("2026-11-05T12:00:00Z");
+        TaskAuditLog log = new TaskAuditLog(
+                42L,
+                AuditAction.UPDATE,
+                "status",
+                "{\"status\":\"TODO\"}",
+                "{\"status\":\"IN_PROGRESS\"}",
+                eventTime
+        );
+        log.setId(1L);
+
+        TaskAuditLogResponse response = taskMapper.toAuditResponse(log);
+
+        assertThat(response).isNotNull();
+        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.taskId()).isEqualTo(42L);
+        assertThat(response.action()).isEqualTo(AuditAction.UPDATE);
+        assertThat(response.changedFields()).isEqualTo("status");
+        assertThat(response.previousState()).isEqualTo("{\"status\":\"TODO\"}");
+        assertThat(response.newState()).isEqualTo("{\"status\":\"IN_PROGRESS\"}");
+        assertThat(response.createdAt()).isEqualTo(eventTime);
+    }
+}

@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskStatus;
 
 import java.time.OffsetDateTime;
@@ -17,6 +19,8 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "tasks")
+@SQLDelete(sql = "UPDATE tasks SET is_deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 public class Task {
 
     @Id
@@ -42,6 +46,12 @@ public class Task {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
+
     public Task() {
     }
 
@@ -51,6 +61,7 @@ public class Task {
         this.description = description;
         this.status = status;
         this.dueDateTime = dueDateTime;
+        this.isDeleted = false;
     }
 
     @PrePersist
@@ -128,6 +139,22 @@ public class Task {
         this.updatedAt = updatedAt;
     }
 
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
+    }
+
+    public OffsetDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(OffsetDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -141,4 +168,3 @@ public class Task {
         return Objects.hash(id);
     }
 }
-

@@ -2,9 +2,11 @@ package uk.gov.hmcts.dts.taskmanager.mapper;
 
 import org.springframework.stereotype.Component;
 import uk.gov.hmcts.dts.taskmanager.dto.CreateTaskRequest;
+import uk.gov.hmcts.dts.taskmanager.dto.TaskAuditLogResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskStatus;
 import uk.gov.hmcts.dts.taskmanager.entity.Task;
+import uk.gov.hmcts.dts.taskmanager.entity.TaskAuditLog;
 
 @Component
 public class TaskMapper {
@@ -35,5 +37,19 @@ public class TaskMapper {
                 task.getUpdatedAt()
         );
     }
-}
 
+    public TaskAuditLogResponse toAuditResponse(TaskAuditLog auditLog) {
+        if (auditLog == null) {
+            return null;
+        }
+        return new TaskAuditLogResponse(
+                auditLog.getId(),
+                auditLog.getTaskId(),
+                auditLog.getAction(),
+                auditLog.getChangedFields(),
+                auditLog.getPreviousState(),
+                auditLog.getNewState(),
+                auditLog.getCreatedAt()
+        );
+    }
+}

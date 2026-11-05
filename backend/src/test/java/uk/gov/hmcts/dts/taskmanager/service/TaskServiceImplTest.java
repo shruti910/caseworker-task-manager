@@ -1,5 +1,6 @@
 package uk.gov.hmcts.dts.taskmanager.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -9,14 +10,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
+import uk.gov.hmcts.dts.taskmanager.dto.AuditAction;
 import uk.gov.hmcts.dts.taskmanager.dto.CreateTaskRequest;
+import uk.gov.hmcts.dts.taskmanager.dto.TaskAuditLogResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskStatus;
 import uk.gov.hmcts.dts.taskmanager.dto.UpdateTaskStatusRequest;
 import uk.gov.hmcts.dts.taskmanager.entity.Task;
+import uk.gov.hmcts.dts.taskmanager.entity.TaskAuditLog;
 import uk.gov.hmcts.dts.taskmanager.exception.InvalidTaskStatusException;
 import uk.gov.hmcts.dts.taskmanager.exception.ResourceNotFoundException;
 import uk.gov.hmcts.dts.taskmanager.mapper.TaskMapper;
+import uk.gov.hmcts.dts.taskmanager.repository.TaskAuditLogRepository;
 import uk.gov.hmcts.dts.taskmanager.repository.TaskRepository;
 
 import java.time.OffsetDateTime;
@@ -38,7 +43,11 @@ class TaskServiceImplTest {
     @Mock
     private TaskRepository taskRepository;
 
+    @Mock
+    private TaskAuditLogRepository taskAuditLogRepository;
+
     private TaskMapper taskMapper;
+    private ObjectMapper objectMapper;
     private TaskServiceImpl taskService;
 
     private final OffsetDateTime sampleDueDateTime = OffsetDateTime.parse("2026-11-20T17:00:00Z");
@@ -46,7 +55,8 @@ class TaskServiceImplTest {
     @BeforeEach
     void setUp() {
         taskMapper = new TaskMapper();
-        taskService = new TaskServiceImpl(taskRepository, taskMapper);
+        objectMapper = new ObjectMapper();
+        taskService = new TaskServiceImpl(taskRepository, taskAuditLogRepository, taskMapper, objectMapper);
     }
 
     @Nested
@@ -54,8 +64,8 @@ class TaskServiceImplTest {
     class CreateTaskTests {
 
         @Test
-        @DisplayName("Should successfully create a task with default TODO status when status is null")
-        void shouldCreateTaskWithDefaultStatus() {
+        @DisplayName("Should successfully create a task with default TODO status and record CREATE audit log")
+        void shouldCreateTaskWithDefaultStatusAndAuditLog() {
             CreateTaskRequest request = new CreateTaskRequest(
                     "Review applicant bundle",
                     "Verify evidence and statement",
@@ -78,9 +88,17 @@ class TaskServiceImplTest {
             assertThat(response.status()).isEqualTo(TaskStatus.TODO);
             assertThat(response.dueDateTime()).isEqualTo(sampleDueDateTime);
 
-            ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
-            verify(taskRepository).save(captor.capture());
-            assertThat(captor.getValue().getStatus()).isEqualTo(TaskStatus.TODO);
+            ArgumentCaptor<Task> taskCaptor = ArgumentCaptor.forClass(Task.class);
+            verify(taskRepository).save(taskCaptor.capture());
+            assertThat(taskCaptor.getValue().getStatus()).isEqualTo(TaskStatus.TODO);
+
+            ArgumentCaptor<TaskAuditLog> auditCaptor = ArgumentCaptor.forClass(TaskAuditLog.class);
+            verify(taskAuditLogRepository).save(auditCaptor.capture());
+            TaskAuditLog auditLog = auditCaptor.getValue();
+            assertThat(auditLog.getTaskId()).isEqualTo(1L);
+            assertThat(auditLog.getAction()).isEqualTo(AuditAction.CREATE);
+            assertThat(auditLog.getPreviousState()).isNull();
+            assertThat(auditLog.getNewState()).contains("Review applicant bundle");
         }
 
         @Test
@@ -105,6 +123,8 @@ class TaskServiceImplTest {
             assertThat(response.id()).isEqualTo(2L);
             assertThat(response.status()).isEqualTo(TaskStatus.IN_PROGRESS);
             assertThat(response.description()).isNull();
+
+            verify(taskAuditLogRepository).save(any(TaskAuditLog.class));
         }
     }
 
@@ -207,8 +227,8 @@ class TaskServiceImplTest {
     class UpdateTaskStatusTests {
 
         @Test
-        @DisplayName("Should update task status successfully")
-        void shouldUpdateStatusSuccessfully() {
+        @DisplayName("Should update task status successfully and record UPDATE audit log")
+        void shouldUpdateStatusSuccessfullyAndAudit() {
             Task existingTask = new Task(5L, "Task to update", "Desc", TaskStatus.TODO, sampleDueDateTime);
             existingTask.setCreatedAt(OffsetDateTime.now());
             existingTask.setUpdatedAt(OffsetDateTime.now());
@@ -225,6 +245,15 @@ class TaskServiceImplTest {
 
             assertThat(response.status()).isEqualTo(TaskStatus.COMPLETED);
             verify(taskRepository).save(existingTask);
+
+            ArgumentCaptor<TaskAuditLog> auditCaptor = ArgumentCaptor.forClass(TaskAuditLog.class);
+            verify(taskAuditLogRepository).save(auditCaptor.capture());
+            TaskAuditLog auditLog = auditCaptor.getValue();
+            assertThat(auditLog.getTaskId()).isEqualTo(5L);
+            assertThat(auditLog.getAction()).isEqualTo(AuditAction.UPDATE);
+            assertThat(auditLog.getChangedFields()).isEqualTo("status");
+            assertThat(auditLog.getPreviousState()).contains("TODO");
+            assertThat(auditLog.getNewState()).contains("COMPLETED");
         }
 
         @Test
@@ -239,6 +268,7 @@ class TaskServiceImplTest {
                     .hasMessage("Task with ID 404 not found");
 
             verify(taskRepository, never()).save(any(Task.class));
+            verify(taskAuditLogRepository, never()).save(any(TaskAuditLog.class));
         }
 
         @Test
@@ -251,6 +281,7 @@ class TaskServiceImplTest {
                     .hasMessage("Task status cannot be null");
 
             verify(taskRepository, never()).findById(any());
+            verify(taskAuditLogRepository, never()).save(any(TaskAuditLog.class));
         }
     }
 
@@ -259,14 +290,22 @@ class TaskServiceImplTest {
     class DeleteTaskTests {
 
         @Test
-        @DisplayName("Should delete task successfully when it exists")
-        void shouldDeleteTaskSuccessfully() {
+        @DisplayName("Should soft-delete task successfully when it exists and record DELETE audit log")
+        void shouldDeleteTaskSuccessfullyAndAudit() {
             Task existingTask = new Task(8L, "Task to delete", null, TaskStatus.TODO, sampleDueDateTime);
             when(taskRepository.findById(8L)).thenReturn(Optional.of(existingTask));
 
             taskService.deleteTask(8L);
 
             verify(taskRepository).delete(existingTask);
+
+            ArgumentCaptor<TaskAuditLog> auditCaptor = ArgumentCaptor.forClass(TaskAuditLog.class);
+            verify(taskAuditLogRepository).save(auditCaptor.capture());
+            TaskAuditLog auditLog = auditCaptor.getValue();
+            assertThat(auditLog.getTaskId()).isEqualTo(8L);
+            assertThat(auditLog.getAction()).isEqualTo(AuditAction.DELETE);
+            assertThat(auditLog.getChangedFields()).isEqualTo("isDeleted,deletedAt");
+            assertThat(auditLog.getNewState()).contains("true");
         }
 
         @Test
@@ -279,7 +318,44 @@ class TaskServiceImplTest {
                     .hasMessage("Task with ID 888 not found");
 
             verify(taskRepository, never()).delete(any(Task.class));
+            verify(taskAuditLogRepository, never()).save(any(TaskAuditLog.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Task Audit Logs Tests")
+    class GetTaskAuditLogsTests {
+
+        @Test
+        @DisplayName("Should return chronological audit logs for existing task")
+        void shouldReturnAuditLogsForTask() {
+            OffsetDateTime t1 = OffsetDateTime.parse("2026-11-05T10:00:00Z");
+            OffsetDateTime t2 = OffsetDateTime.parse("2026-11-05T11:00:00Z");
+
+            TaskAuditLog log1 = new TaskAuditLog(10L, AuditAction.CREATE, "status", null, "{\"status\":\"TODO\"}", t1);
+            log1.setId(1L);
+            TaskAuditLog log2 = new TaskAuditLog(10L, AuditAction.UPDATE, "status", "{\"status\":\"TODO\"}", "{\"status\":\"IN_PROGRESS\"}", t2);
+            log2.setId(2L);
+
+            when(taskAuditLogRepository.findByTaskIdOrderByCreatedAtAsc(10L))
+                    .thenReturn(List.of(log1, log2));
+
+            List<TaskAuditLogResponse> responses = taskService.getTaskAuditLogs(10L);
+
+            assertThat(responses).hasSize(2);
+            assertThat(responses.get(0).action()).isEqualTo(AuditAction.CREATE);
+            assertThat(responses.get(1).action()).isEqualTo(AuditAction.UPDATE);
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when no audit logs found for task")
+        void shouldThrowWhenNoAuditLogsFound() {
+            when(taskAuditLogRepository.findByTaskIdOrderByCreatedAtAsc(9999L))
+                    .thenReturn(Collections.emptyList());
+
+            assertThatThrownBy(() -> taskService.getTaskAuditLogs(9999L))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Task with ID 9999 not found");
         }
     }
 }
-

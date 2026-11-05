@@ -1,6 +1,7 @@
 package uk.gov.hmcts.dts.taskmanager.service;
 
 import uk.gov.hmcts.dts.taskmanager.dto.CreateTaskRequest;
+import uk.gov.hmcts.dts.taskmanager.dto.TaskAuditLogResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskResponse;
 import uk.gov.hmcts.dts.taskmanager.dto.TaskStatus;
 import uk.gov.hmcts.dts.taskmanager.dto.UpdateTaskStatusRequest;
@@ -18,5 +19,6 @@ public interface TaskService {
     TaskResponse updateTaskStatus(Long id, UpdateTaskStatusRequest request);
 
     void deleteTask(Long id);
-}
 
+    List<TaskAuditLogResponse> getTaskAuditLogs(Long taskId);
+}
