@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import uk.gov.hmcts.dts.taskmanager.dto.AuditAction;
 import uk.gov.hmcts.dts.taskmanager.dto.CreateTaskRequest;
@@ -47,7 +48,7 @@ class TaskControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private TaskService taskService;
 
     @Autowired
@@ -66,8 +67,7 @@ class TaskControllerTest {
                     "Review Immigration Appeal",
                     "Detailed review of applicant grounds",
                     TaskStatus.TODO,
-                    sampleDueDateTime
-            );
+                    sampleDueDateTime);
 
             TaskResponse response = new TaskResponse(
                     1L,
@@ -76,14 +76,13 @@ class TaskControllerTest {
                     TaskStatus.TODO,
                     sampleDueDateTime,
                     OffsetDateTime.now(),
-                    OffsetDateTime.now()
-            );
+                    OffsetDateTime.now());
 
             when(taskService.createTask(any(CreateTaskRequest.class))).thenReturn(response);
 
             mockMvc.perform(post("/api/tasks")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
                     .andExpect(header().string("Location", containsString("/api/tasks/1")))
                     .andExpect(jsonPath("$.id", is(1)))
@@ -100,12 +99,11 @@ class TaskControllerTest {
                     "   ",
                     "Description here",
                     TaskStatus.TODO,
-                    sampleDueDateTime
-            );
+                    sampleDueDateTime);
 
             mockMvc.perform(post("/api/tasks")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.error", is("Bad Request")))
@@ -120,12 +118,11 @@ class TaskControllerTest {
                     longTitle,
                     "Description",
                     TaskStatus.TODO,
-                    sampleDueDateTime
-            );
+                    sampleDueDateTime);
 
             mockMvc.perform(post("/api/tasks")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.fieldErrors[0].field", is("title")));
         }
@@ -137,12 +134,11 @@ class TaskControllerTest {
                     "Valid Title",
                     "Description",
                     TaskStatus.TODO,
-                    null
-            );
+                    null);
 
             mockMvc.perform(post("/api/tasks")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.fieldErrors[0].field", is("dueDateTime")));
         }
@@ -153,8 +149,8 @@ class TaskControllerTest {
             String malformedJson = "{ title: 'Missing quotes', dueDateTime: ";
 
             mockMvc.perform(post("/api/tasks")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(malformedJson))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(malformedJson))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.message", containsString("Malformed request body")));
@@ -178,8 +174,10 @@ class TaskControllerTest {
         @Test
         @DisplayName("Should return all tasks sorted by due date ascending by default")
         void shouldReturnAllTasksSortedByDefault() throws Exception {
-            TaskResponse task1 = new TaskResponse(1L, "Earlier task", null, TaskStatus.IN_PROGRESS, sampleDueDateTime, OffsetDateTime.now(), OffsetDateTime.now());
-            TaskResponse task2 = new TaskResponse(2L, "Later task", null, TaskStatus.TODO, sampleDueDateTime.plusDays(2), OffsetDateTime.now(), OffsetDateTime.now());
+            TaskResponse task1 = new TaskResponse(1L, "Earlier task", null, TaskStatus.IN_PROGRESS, sampleDueDateTime,
+                    OffsetDateTime.now(), OffsetDateTime.now());
+            TaskResponse task2 = new TaskResponse(2L, "Later task", null, TaskStatus.TODO,
+                    sampleDueDateTime.plusDays(2), OffsetDateTime.now(), OffsetDateTime.now());
 
             when(taskService.getAllTasks(any(), eq("dueDateTime"), eq("asc"))).thenReturn(List.of(task1, task2));
 
@@ -193,7 +191,8 @@ class TaskControllerTest {
         @Test
         @DisplayName("Should filter tasks by status correctly")
         void shouldFilterByStatus() throws Exception {
-            TaskResponse doneTask = new TaskResponse(3L, "Completed item", null, TaskStatus.COMPLETED, sampleDueDateTime, OffsetDateTime.now(), OffsetDateTime.now());
+            TaskResponse doneTask = new TaskResponse(3L, "Completed item", null, TaskStatus.COMPLETED,
+                    sampleDueDateTime, OffsetDateTime.now(), OffsetDateTime.now());
 
             when(taskService.getAllTasks(eq(TaskStatus.COMPLETED), any(), any())).thenReturn(List.of(doneTask));
 
@@ -212,7 +211,8 @@ class TaskControllerTest {
         @Test
         @DisplayName("Should retrieve task successfully by ID")
         void shouldGetTaskById() throws Exception {
-            TaskResponse task = new TaskResponse(10L, "Target task", "Specific desc", TaskStatus.IN_PROGRESS, sampleDueDateTime, OffsetDateTime.now(), OffsetDateTime.now());
+            TaskResponse task = new TaskResponse(10L, "Target task", "Specific desc", TaskStatus.IN_PROGRESS,
+                    sampleDueDateTime, OffsetDateTime.now(), OffsetDateTime.now());
 
             when(taskService.getTaskById(10L)).thenReturn(task);
 
@@ -226,7 +226,8 @@ class TaskControllerTest {
         @Test
         @DisplayName("Should return 404 when task ID does not exist")
         void shouldReturn404WhenNotFound() throws Exception {
-            when(taskService.getTaskById(99999L)).thenThrow(new ResourceNotFoundException("Task with ID 99999 not found"));
+            when(taskService.getTaskById(99999L))
+                    .thenThrow(new ResourceNotFoundException("Task with ID 99999 not found"));
 
             mockMvc.perform(get("/api/tasks/{id}", 99999L))
                     .andExpect(status().isNotFound())
@@ -253,13 +254,14 @@ class TaskControllerTest {
         @DisplayName("Should update task status successfully")
         void shouldUpdateStatusSuccessfully() throws Exception {
             UpdateTaskStatusRequest request = new UpdateTaskStatusRequest(TaskStatus.COMPLETED);
-            TaskResponse updated = new TaskResponse(5L, "Status Test", null, TaskStatus.COMPLETED, sampleDueDateTime, OffsetDateTime.now(), OffsetDateTime.now());
+            TaskResponse updated = new TaskResponse(5L, "Status Test", null, TaskStatus.COMPLETED, sampleDueDateTime,
+                    OffsetDateTime.now(), OffsetDateTime.now());
 
             when(taskService.updateTaskStatus(eq(5L), any(UpdateTaskStatusRequest.class))).thenReturn(updated);
 
             mockMvc.perform(patch("/api/tasks/{id}/status", 5L)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id", is(5)))
                     .andExpect(jsonPath("$.status", is("COMPLETED")));
@@ -274,8 +276,8 @@ class TaskControllerTest {
                     .thenThrow(new ResourceNotFoundException("Task with ID 77777 not found"));
 
             mockMvc.perform(patch("/api/tasks/{id}/status", 77777L)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status", is(404)));
         }
@@ -286,8 +288,8 @@ class TaskControllerTest {
             String invalidPayload = "{\"status\": \"UNKNOWN_STATUS\"}";
 
             mockMvc.perform(patch("/api/tasks/{id}/status", 1L)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(invalidPayload))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidPayload))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.status", is(400)));
         }
@@ -325,11 +327,10 @@ class TaskControllerTest {
         @DisplayName("Should return 200 with list of audit logs when task exists")
         void shouldReturnAuditLogs() throws Exception {
             TaskAuditLogResponse log1 = new TaskAuditLogResponse(
-                    1L, 10L, AuditAction.CREATE, "title,status", null, "{\"title\":\"Sample\"}", OffsetDateTime.now()
-            );
+                    1L, 10L, AuditAction.CREATE, "title,status", null, "{\"title\":\"Sample\"}", OffsetDateTime.now());
             TaskAuditLogResponse log2 = new TaskAuditLogResponse(
-                    2L, 10L, AuditAction.UPDATE, "status", "{\"status\":\"TODO\"}", "{\"status\":\"IN_PROGRESS\"}", OffsetDateTime.now()
-            );
+                    2L, 10L, AuditAction.UPDATE, "status", "{\"status\":\"TODO\"}", "{\"status\":\"IN_PROGRESS\"}",
+                    OffsetDateTime.now());
 
             when(taskService.getTaskAuditLogs(10L)).thenReturn(List.of(log1, log2));
 
@@ -343,7 +344,8 @@ class TaskControllerTest {
         @Test
         @DisplayName("Should return 404 when task ID does not exist")
         void shouldReturn404WhenNoLogsFound() throws Exception {
-            when(taskService.getTaskAuditLogs(99999L)).thenThrow(new ResourceNotFoundException("Task with ID 99999 not found"));
+            when(taskService.getTaskAuditLogs(99999L))
+                    .thenThrow(new ResourceNotFoundException("Task with ID 99999 not found"));
 
             mockMvc.perform(get("/api/tasks/{id}/audit-logs", 99999L))
                     .andExpect(status().isNotFound())
@@ -360,12 +362,11 @@ class TaskControllerTest {
         @DisplayName("Should return 405 Method Not Allowed when calling PUT on /api/tasks")
         void shouldReturn405ForPutOnCollection() throws Exception {
             mockMvc.perform(put("/api/tasks")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{}"))
                     .andExpect(status().isMethodNotAllowed())
                     .andExpect(jsonPath("$.status", is(405)))
                     .andExpect(jsonPath("$.error", is("Method Not Allowed")));
         }
     }
 }
-
